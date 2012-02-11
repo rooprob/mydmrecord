@@ -1,0 +1,1 @@
+main.o: /usr/include/internal/sgimacros.h /usr/include/sys/errno.h /usr/include/errno.h /usr/include/standards.h /usr/include/sgidefs.h /usr/include/internal/stdio_core.h /usr/include/getopt.h /usr/include/internal/errno_core.h /usr/include/internal/limits_core.h /usr/include/limits.h #:fec
