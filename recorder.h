@@ -19,7 +19,6 @@
 #define DO_FIELD (options.unit != UNIT_FRAME)
 
 typedef struct {
-
 	int		debug;
 	int		verbose;
 
@@ -28,51 +27,49 @@ typedef struct {
 	int 		quality;
 
 	int       	unit;             /* UNIT_FRAME or UNIT_FIELD */
-	float		quality;
 } options_t;
 
-typedef struct
-{
-    VLServer    server;
-    VLDevice	*viddevice;
-    VLDev       videoKind; // VL_VIDEO (int video h/w)
-    int         videoPort; // VL_ANY (int camera port)
-    VLPath      pathin;
-    int		pathinfd;
-    VLPath      pathout;
-    int		pathoutfd;
-    VLPath      pathcomp;
-    VLNode      vidsrc;
-    VLNode      viddrn;
-    VLNode      memdrn;
-    VLNode      memsrc;
+typedef struct {
+	VLServer    server;
+	VLDevice	*viddevice;
+	VLDev       videoKind; // VL_VIDEO (int video h/w)
+	int         videoPort; // VL_ANY (int camera port)
+	VLPath      pathin;
+	int		pathinfd;
+	VLPath      pathout;
+	int		pathoutfd;
+	VLPath      pathcomp;
+	VLNode      vidsrc;
+	VLNode      viddrn;
+	VLNode      memdrn;
+	VLNode      memsrc;
 
-    int         width;
-    int         height;
-    double      frameRate;
-    int         frames;
-    int         xferbytes;
-    int    	ic_idx;
-    DMimageconverter    ic;
-    int         icfd;
-    int         fdominance;
-    int         timing;
-    int         originX;
-    int         originY;
-    long        waitPerBuffer;  /* microseconds to wait for a buffer (frame */
-                                /* or field) to arrive */
+	int         width;
+	int         height;
+	double      frameRate;
+	int         frames;
+	int         xferbytes;
+	int    	ic_idx;
+	DMimageconverter    ic;
+	int         icfd;
+	int         fdominance;
+	int         timing;
+	int         originX;
+	int         originY;
+	long        waitPerBuffer;  /* microseconds to wait for a buffer (frame */
+	/* or field) to arrive */
 } cstate_t;
 
 typedef struct {
 	// dmBuffer* details
 	DMbufferpool 	inpool;
 	int		inpoolfd;
-	int		inbufs;
+	int		inbufs ;
 	int		inbufsize;
-	
+
 	DMbufferpool 	outpool;
 	int 		outpoolfd;
-	int		outbufs;
+	int		outbufs ;
 	int		outbufsize;
 
 	DMbufferpool 	comppool;
@@ -84,4 +81,3 @@ typedef struct {
 options_t options;
 cstate_t cstate ;
 buffer_t buffer ;
-

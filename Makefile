@@ -4,6 +4,7 @@ CFILES   = \
 	main.c \
 	capture.c \
 	converter.c \
+	callback.c \
 	image.c \
 	$(NULL)
 

@@ -9,6 +9,11 @@ int main(int args, char ** argv) {
 	options.debug = 1;
 	options.unit = UNIT_FIELD ;
 	options.quality = 70.0;
+	options.duration = 60;
+	
+
+	buffer.inbufs = 60;
+	buffer.outbufs = 60;
 
 	printf("Hello world. This is the recorder: verbose = %d, debug = %d\n", 
 			options.verbose, options.debug);

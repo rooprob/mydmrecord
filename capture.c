@@ -4,7 +4,8 @@
 #include "dmedia/vl_mvp.h"
 #include <signal.h>
 
-void cb_ProcessEvent(VLServer, VLEvent *, void *);
+void cb_ProcessEventToIC(VLServer, VLEvent *, void *);
+void cb_ProcessEventFromIC(VLServer, VLEvent *, void *);
 
 /* Get the start time (for frame rate measurement) */
 struct timeval  tv_save;
@@ -31,39 +32,6 @@ void reportStatistics(void) {
 }
 
 
-void cb_ProcessEvent(VLServer server, VLEvent *ev, void * clientData) {
-
-	VLInfoPtr info;
-	char *dataPtr;
-
-	int *data = (int *)clientData ;
-
-	printf("made the in %d callback! %s \n",
-			*data, vlEventToName(ev->reason));
-	reportStatistics();
-
-	switch (ev->reason) {
-		case VLTransferComplete:
-			/*
-			while (info = vlGetNextValid(cstate.server, buffer.inbufs)) {
-				printf("vlGetNextValid\n");
-				dataPtr =
-					vlGetActiveRegion(cstate.server, buffer.inbufs,
-							info) 
-					vlPutFree(cstate.server,buffer.inbufs);
-			}*/
-		break;
-		case VLSequenceLost:
-			printf("Aiiieee - seq lost\n");
-			vlEndTransfer(cstate.server, cstate.pathin) ;
-			vlEndTransfer(cstate.server, cstate.pathout) ;
-			shutdown();
-		break;
-		default:
-		break;
-	}
-
-}
 static void sigint(void) {
 	shutdown();
 }
@@ -108,20 +76,40 @@ int vidsrc_discovery() {
 
 	return 1;
 }
-/* input to memory memdrn */
-int setup_input_paths() {
+
+int get_video_rate() {
 
 	VLControlValue controlvalue;
+
+	vlGetControl(cstate.server, cstate.pathin, cstate.vidsrc,
+			VL_TIMING, &controlvalue) ;
+	cstate.timing = controlvalue.intVal ;
+	printf("info: cstate timing %d\n", cstate.timing);
+	if ((cstate.timing == VL_TIMING_625_SQ_PIX) 
+			|| (cstate.timing == VL_TIMING_625_CCIR601)) {
+		cstate.frameRate = 25;
+		printf("videorate: 25.0 fps\n");
+	} else {
+		cstate.frameRate = 29.97 ;
+		printf("videorate: 29.97 fps\n");
+	}
+
+	cstate.waitPerBuffer = (long) (1000000.0 / cstate.frameRate) ;
+	if (DO_FIELD)
+		cstate.waitPerBuffer /= 2;
+	return 1;
+}
+
+/* input to memory memdrn */
+int setup_input_paths() {
 
 	if (!vidsrc_discovery()) {
 		return 0;
 	}
-	if (!setup_converter()) {
-		return 0;
-	}
 
 	// camera input ...
-	if ((cstate.vidsrc = vlGetNode(cstate.server, VL_SRC, cstate.videoKind, cstate.videoPort)) == -1) {
+	if ((cstate.vidsrc = vlGetNode(cstate.server, VL_SRC, 
+					cstate.videoKind, cstate.videoPort)) == -1) {
 		fprintf(stderr, "error: vlGetNode() vidsrc: %s\n", 
 					vlStrError(vlGetErrno()));
 		return 0;
@@ -148,18 +136,9 @@ int setup_input_paths() {
 		return 0;
 	}
 
-	cstate.timing = controlvalue.intVal ;
-	printf("info: cstate timing %d\n", cstate.timing);
-	if ((cstate.timing == VL_TIMING_625_SQ_PIX) 
-			|| (cstate.timing == VL_TIMING_625_CCIR601)) {
-		cstate.frameRate = 25;
-		printf("info: 25.0 fps\n");
-	} else {
-		cstate.frameRate = 29.97 ;
-		printf("info: 29.97 fps\n");
-	}
 
 	// XXX where did this come from?
+	/*
 	controlvalue.intVal = VL_PACKING_RGB_8;
 	vlSetControl(cstate.server, cstate.pathin, cstate.memdrn,
 			VL_PACKING, &controlvalue) ;
@@ -172,18 +151,15 @@ int setup_input_paths() {
 			VL_FORMAT, &controlvalue) ;
 	vlGetControl(cstate.server, cstate.pathin, cstate.memdrn,
 			VL_SIZE, &controlvalue) ;
+	*/
 
 	return 1;
 
 }
-
+/*
 int setup_xfer_buffers() {
 
 	DMparams *params;
-	VLTransferDescriptor xferDesc;
-
-	int one = 1;
-	int two = 2;
 
 	buffer.inbuf = 60 ; // XXX just made this up, approx 2 seconds
 	buffer.inbufsize = cstate.xferbytes;
@@ -222,41 +198,41 @@ int setup_xfer_buffers() {
 		return 0;
 	}
 	dmParamsDestroy(params);
+}
 
-	// receive callbacks on the two channels
+*/
+
+int register_callbacks() {
+	int one = 1;
+
+	// receive callbacks
 	vlSelectEvents(cstate.server, cstate.pathin, VLAllEventsMask);
-	vlSelectEvents(cstate.server, cstate.pathout, VLAllEventsMask);
 	// register callback
 	if (vlAddCallback(cstate.server, cstate.pathin, VLAllEventsMask,
-				cb_ProcessEvent, &one) == -1) {
+				cb_ProcessEventToIC, &one) == -1) {
 		fprintf(stderr, "error: vlAddCallback() pathin: %s\n", 
 					vlStrError(vlGetErrno()));
 		return 0;
 	}
-	if (vlAddCallback(cstate.server, cstate.pathout, VLAllEventsMask,
-				cb_ProcessEvent, &two) == -1) {
-		fprintf(stderr, "error: vlAddCallback() pathout: %s\n", 
-					vlStrError(vlGetErrno()));
-		return 0;
-	}
+	fprintf(stderr, "debug: callbacks ok\n");
+	return 1;
+}
+
+int begin_data_transfer() {
+
+	VLTransferDescriptor xferDesc;
 
 	xferDesc.mode = VL_TRANSFER_MODE_DISCRETE;
-	xferDesc.count = 10 ;
+	xferDesc.count = 60;
 	xferDesc.delay = 0;
 	xferDesc.trigger = VLTriggerImmediate;
 
-	/* Begin the data transfer */
-	if(vlBeginTransfer(cstate.server, cstate.pathout, 1, &xferDesc) == -1) {
-		fprintf(stderr, "error: vlBeginTransfer(): pathout\n");
-		return 0;
-	}
 	if(vlBeginTransfer(cstate.server, cstate.pathin, 1, &xferDesc) == -1) {
 		fprintf(stderr, "error: vlBeginTransfer(): pathin\n");
 		return 0;
 	}
 
-
-	printf("info: setup complete successfully\n");
+	printf("info: data_transfer ok\n");
 	return 1;
 }
 
@@ -269,39 +245,19 @@ int shutdown () {
 	}
 	printf("info: transfered %d\n", transferSize);
 
-	if (vlDMPoolDeregister(cstate.server, cstate.pathin,
-				cstate.memdrn, buffer.inpool) == -1) {
-		fprintf(stderr, "warn: vlDMPoolDeregister()\n"); 
-	}
-	printf("debug: vlDMPoolDeregister pathin, memdrn, buffer inpool ok\n");
-	if (dmBufferDestroyPool(buffer.inpool) != DM_SUCCESS) {
-		fprintf(stderr, "warn: dmBufferDestroyPool()\n");
-	}
-	printf("debug: dmBufferDestroyPool inpool\n");
+	shutdown_converter();
 
 	if (vlDestroyPath(cstate.server, cstate.pathin) == -1) {
 		fprintf(stderr, "error: vlDestroyPath(): %s\n", 
 					vlStrError(vlGetErrno()));
 		return 0;
 	}
-	printf("vlDestroyPath pathin ok\n");
-	if (vlDestroyPath(cstate.server, cstate.pathout) == -1) {
-		fprintf(stderr, "error: vlDestroyPath(): %s\n", 
-					vlStrError(vlGetErrno()));
-		return 0;
-	}
-	// shutdown image converter (compressor)
-	shutdown_converter();
-
-	printf("vlDestroyPath pathout ok\n");
 	printf("info: shutdown complete successfully\n");
 	exit(0);
 	return 1;
 }
 
-
 int capture(int args, char ** argv) {
-
 
 	sigset(SIGINT, sigint);
 
@@ -312,16 +268,28 @@ int capture(int args, char ** argv) {
 	if (! setup_image()) {
 		return 0;
 	}
+	if (! get_video_rate()) {
+		return 0;
+	}
+	if (! setup_converter()) {
+		return 0;
+	}
+	if (! register_callbacks()) {
+		return 0;
+	}
 
-
+	initStatistics();
 	printf("starting capture; device = %s, videoPort = %d\n",
 			(cstate.viddevice)->name,
 			cstate.videoPort);
 
-	initStatistics();
+	if (! begin_data_transfer()) {
+		return 0;
+	}
 
 	vlMainLoop(); 
 
+	// wont get here
 	if (! shutdown()) {
 		return 0;
 	}
