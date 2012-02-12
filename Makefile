@@ -3,6 +3,8 @@ include $(ROOT)/usr/include/make/commondefs
 CFILES   = \
 	main.c \
 	capture.c \
+	converter.c \
+	image.c \
 	$(NULL)
 
 COBJS = $(CFILES:.c=.o)
@@ -11,6 +13,7 @@ TARGETS = dmrecord
 
 LLDLIBS =  -lvl \
 	   -ldmedia \
+	   -lcl \
 	   -ldmalloc
 
 default all: $(TARGETS)

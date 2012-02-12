@@ -7,6 +7,8 @@ int main(int args, char ** argv) {
 
 	options.verbose = 1;
 	options.debug = 1;
+	options.unit = UNIT_FIELD ;
+	options.quality = 70.0;
 
 	printf("Hello world. This is the recorder: verbose = %d, debug = %d\n", 
 			options.verbose, options.debug);

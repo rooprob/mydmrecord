@@ -6,10 +6,17 @@
 /* include SGI dmedia includes */
 #include <dmedia/vl.h>
 #include <dmedia/dm_params.h>
+#include <dmedia/dm_imageconvert.h>
 
 #ifdef DMALLOC
 #include "dmalloc.h"
 #endif
+
+#define UNIT_FRAME 1
+#define UNIT_FIELD 0
+
+#define DO_FRAME (options.unit == UNIT_FRAME)
+#define DO_FIELD (options.unit != UNIT_FRAME)
 
 typedef struct {
 
@@ -20,6 +27,8 @@ typedef struct {
 	long long 	duration;
 	int 		quality;
 
+	int       	unit;             /* UNIT_FRAME or UNIT_FIELD */
+	float		quality;
 } options_t;
 
 typedef struct
@@ -40,10 +49,11 @@ typedef struct
 
     int         width;
     int         height;
-    double      rate;
+    double      frameRate;
     int         frames;
     int         xferbytes;
-//    DMimageconverter    ic;
+    int    	ic_idx;
+    DMimageconverter    ic;
     int         icfd;
     int         fdominance;
     int         timing;
