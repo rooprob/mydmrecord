@@ -141,51 +141,13 @@ int setup_input_paths() {
 		return 0;
 	}
 
-	// XXX required?
-	// memory input ...
-	if ((cstate.memsrc = vlGetNode(cstate.server, VL_SRC, VL_MEM, VL_ANY)) == -1) {
-		fprintf(stderr, "error: vlGetNode() memsrc: %s\n", 
-					vlStrError(vlGetErrno()));
-		return 0;
-	}
-	// ... into video drain
-	if ((cstate.viddrn = vlGetNode(cstate.server, VL_DRN, VL_VIDEO, VL_ANY)) == -1) {
-		fprintf(stderr, "error: vlGetNode() viddrn: %s\n", 
-					vlStrError(vlGetErrno()));
-		return 0;
-	}
-	// establish input path from memory to video
-	if ((cstate.pathout = vlCreatePath(cstate.server,
-					VL_ANY,
-					cstate.memsrc, cstate.viddrn)) == -1) {
-		fprintf(stderr, "error: vlCreatePath(): %s\n", 
-					vlStrError(vlGetErrno()));
-		return 0;
-	}// END XXXrequired?
- 
-	// Setup a path lst pathin, pathout,...	
+	// Setup a path lst pathin
 	if (vlSetupPaths(cstate.server, (VLPathList)&(cstate.pathin), 1, VL_SHARE, VL_SHARE) == -1) {
 		fprintf(stderr, "error: vlSetupPaths() pathin: %s\n", 
 					vlStrError(vlGetErrno()));
 		return 0;
 	}
-	// XXX required?
-	if (vlSetupPaths(cstate.server, (VLPathList)&(cstate.pathout), 1, VL_SHARE, VL_SHARE) == -1) {
-		fprintf(stderr, "error: vlSetupPaths() pathout: %s\n", 
-					vlStrError(vlGetErrno()));
-		return 0;
-	}// END XXXrequired?
 
-	// set the output drains timing back on the input source timing
-	if (vlGetControl(cstate.server, cstate.pathin, cstate.vidsrc,
-			       	VL_TIMING, &controlvalue) == 0) {
-		if (vlSetControl(cstate.server, cstate.pathout, cstate.viddrn,
-					VL_TIMING, &controlvalue) == -1) {
-			fprintf(stderr, "error: vlSetControl(): %s\n", 
-						vlStrError(vlGetErrno()));
-			return 0;
-		}
-	}
 	cstate.timing = controlvalue.intVal ;
 	printf("info: cstate timing %d\n", cstate.timing);
 	if ((cstate.timing == VL_TIMING_625_SQ_PIX) 
